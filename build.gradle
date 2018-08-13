@@ -1,0 +1,60 @@
+plugins {
+    id 'java'
+}
+
+repositories {
+  mavenLocal()
+  maven { url "http://repo.maven.apache.org/maven2" }
+}
+
+
+configurations {
+    xjcref
+    xjcrun
+    gen
+}
+
+sourceSets {
+    gen {
+        java {
+            srcDir 'src/gen/java'
+        }
+    }
+}
+
+dependencies {
+    xjcref 'com.sun.xml.bind:jaxb-xjc:2.2.7'
+    xjcref 'com.sun.xml.bind:jaxb-core:2.2.7'
+    xjcref 'javax.xml.bind:jaxb-api:2.2.7'
+    xjcrun "com.github.jaxb-xew-plugin:jaxb-xew-plugin:1.4"
+    xjcrun "net.java.dev.jaxb2-commons:jaxb-fluent-api:2.1.8"
+}
+
+def processXSD(schemaName, pkgName) {
+    ant.xjc(destdir: sourceSets.gen.java.srcDirs[0], package: pkgName, extension: true) {
+        classpath { pathelement(path: configurations.xjcrun.asPath) }
+        schema(dir: "src/main/xsd", includes: schemaName)
+    }
+}
+
+task processXSDs() << {
+    mkdir "src/gen/java"
+    ant.taskdef(name: 'xjc', classname: 'com.sun.tools.xjc.XJCTask',
+            classpath: configurations.xjcref.asPath)
+    processXSD("employee.xsd", "com.harsha.employee.xml")
+}
+
+compileJava {
+    dependsOn processXSDs
+    source "${buildDir}/generated-src"
+}
+
+sourceSets {
+    main {
+        java {
+            srcDir "src/gen/java"
+        }
+    }
+}
+
+
